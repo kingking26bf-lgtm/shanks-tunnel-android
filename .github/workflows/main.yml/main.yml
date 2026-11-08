@@ -1,0 +1,50 @@
+
+name: Build SHANKS TUNNEL APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download project
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extract ZIP
+        run: |
+          unzip project.zip -d extracted
+
+      - name: Locate Android project
+        run: |
+          GRADLEW=$(find extracted -name gradlew -type f | head -n 1)
+          if [ -z "$GRADLEW" ]; then
+            echo "ERROR: gradlew not found in ZIP"
+            exit 1
+          fi
+          echo "GRADLEW=$GRADLEW" >> $GITHUB_ENV
+
+      - name: Build APK
+        run: |
+          chmod +x "$GRADLEW"
+          cd "$(dirname "$GRADLEW")"
+          ./gradlew assembleDebug
+
+      - name: Prepare APK
+        run: |
+          mkdir -p apk-output
+          find extracted -name "*.apk" -path "*/build/outputs/apk/*" -exec cp {} apk-output/ \;
+          ls -la apk-output
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHANKS-TUNNEL-APK
+          path: apk-output/*.apk
